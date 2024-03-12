@@ -1,0 +1,79 @@
+import { Song } from "../Schemas/songs.js";
+import cloudinary from "cloudinary";
+import getDataUri from "../Utils/dataUri.js";
+import ErrorHandler from "../Utils/ErrorHandler.js";
+import { Poster } from "../Schemas/Poster.js";
+
+export const addSongs = async (req, res, next) => {
+  try {
+    const { songname, posterId } = req.body;
+    if (!songname || !posterId)
+      return next(new ErrorHandler("please Enter all fiels", 400));
+    const file = req.file;
+
+    const fileUri = getDataUri(file);
+
+    // Upload to Cloudinary
+    const myCloud = await cloudinary.v2.uploader.upload(fileUri.content, {
+      resource_type: "video",
+      public_id: `audio_${Date.now()}`,
+      format: "mp3",
+      timeout: 120000,
+    });
+
+    if (!myCloud || !myCloud.public_id) {
+      throw new ErrorHandler(
+        "Error uploading to Cloudinary or missing public_id",
+        500
+      );
+    }
+
+    // Create song entry in the database
+    const upload = await Song.create({
+      songname,
+      song: { public_id: myCloud.public_id, url: myCloud.secure_url },
+      poster: posterId,
+    });
+
+    res.status(201).json({
+      success: true,
+      upload,
+    });
+  } catch (error) {
+    console.log(error);
+  }
+};
+
+export const getSong = async (req, res, next) => {
+  try {
+    const songs = await Song.find().populate("poster");
+    if (!songs) return next(new ErrorHandler("Some technical issue", 500));
+    res.status(200).json({
+      success: true,
+      songs,
+    });
+  } catch (error) {
+    console.log(error);
+    next(new ErrorHandler("Internal Server Error", 500));
+  }
+};
+
+// Poster Controller
+
+export const addPoster = async (req, res, next) => {
+  const file = req.file;
+  if (!file) return next("please Enter file", 404);
+  const fileUri = getDataUri(file);
+
+  const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
+  const poster = await Poster.create({
+    url: myCloud.secure_url,
+    public_id: myCloud.public_id,
+  });
+
+  res.status(201).json({
+    success: true,
+    message: "poster created successfully",
+    poster,
+  });
+};
