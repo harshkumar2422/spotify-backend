@@ -8,7 +8,7 @@ export const addSongs = async (req, res, next) => {
   try {
     const { songname, posterId } = req.body;
     if (!songname || !posterId)
-      return next(new ErrorHandler("please Enter all fiels", 400));
+      return next(new ErrorHandler("Please enter all fields", 400));
     const file = req.file;
 
     const fileUri = getDataUri(file);
@@ -40,7 +40,7 @@ export const addSongs = async (req, res, next) => {
       upload,
     });
   } catch (error) {
-    console.log(error);
+    next(error); // Pass the error to the error handling middleware
   }
 };
 
@@ -53,27 +53,29 @@ export const getSong = async (req, res, next) => {
       songs,
     });
   } catch (error) {
-    console.log(error);
-    next(new ErrorHandler("Internal Server Error", 500));
+    next(error); // Pass the error to the error handling middleware
   }
 };
 
-// Poster Controller
-
 export const addPoster = async (req, res, next) => {
-  const file = req.file;
-  if (!file) return next("please Enter file", 404);
-  const fileUri = getDataUri(file);
+  try {
+    const file = req.file;
+    if (!file) return next(new ErrorHandler("Please upload a file", 400));
 
-  const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
-  const poster = await Poster.create({
-    url: myCloud.secure_url,
-    public_id: myCloud.public_id,
-  });
+    const fileUri = getDataUri(file);
 
-  res.status(201).json({
-    success: true,
-    message: "poster created successfully",
-    poster,
-  });
+    const myCloud = await cloudinary.v2.uploader.upload(fileUri.content);
+    const poster = await Poster.create({
+      url: myCloud.secure_url,
+      public_id: myCloud.public_id,
+    });
+
+    res.status(201).json({
+      success: true,
+      message: "Poster created successfully",
+      poster,
+    });
+  } catch (error) {
+    next(error); // Pass the error to the error handling middleware
+  }
 };
