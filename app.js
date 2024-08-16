@@ -11,7 +11,7 @@ app.use(express.json());
 config({ path: "./config.env" });
 app.use(
   cors({
-    origin: "http://localhost:3000", // Corrected "localhost"
+    origin: "https://spotifiy.vercel.app", // Corrected "localhost"
     credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE"],
   })
